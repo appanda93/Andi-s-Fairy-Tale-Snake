@@ -39,7 +39,7 @@
       margin-bottom: 20px;
       text-shadow: 0 0 8px #ff99cc, 0 0 12px #cc99ff;
     }
-    .menu button, .game-over button, #musicBtn, .dpad button {
+    .menu button, .game-over button, #musicBtn {
       font-family: 'Sacramento', cursive;
       font-size: 24px;
       padding: 10px 20px;
@@ -51,7 +51,7 @@
       box-shadow: 0 4px 8px rgba(0,0,0,0.2);
       transition: all 0.2s ease;
     }
-    .menu button:hover, .game-over button:hover, #musicBtn:hover, .dpad button:hover {
+    .menu button:hover, .game-over button:hover, #musicBtn:hover {
       background: #e6c7ff;
       transform: scale(1.05);
     }
@@ -76,26 +76,6 @@
       right: 10px;
       display: none;
     }
-    /* Mobile D-pad */
-    .dpad {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: none;
-      grid-template-areas:
-        ". up ."
-        "left down right";
-      gap: 5px;
-    }
-    .dpad button {
-      width: 60px;
-      height: 60px;
-    }
-    .dpad-up { grid-area: up; }
-    .dpad-down { grid-area: down; }
-    .dpad-left { grid-area: left; }
-    .dpad-right { grid-area: right; }
   </style>
 </head>
 <body>
@@ -112,14 +92,6 @@
   <div id="scoreBoard">Score: 0</div>
   <canvas id="gameCanvas"></canvas>
   <button id="musicBtn" onclick="toggleMusic()">🔊 Music On</button>
-
-  <!-- Mobile D-pad -->
-  <div class="dpad" id="dpad">
-    <button class="dpad-up" onclick="setDirection('up')">⬆</button>
-    <button class="dpad-left" onclick="setDirection('left')">⬅</button>
-    <button class="dpad-down" onclick="setDirection('down')">⬇</button>
-    <button class="dpad-right" onclick="setDirection('right')">➡</button>
-  </div>
 
   <!-- Game Over Screen -->
   <div class="game-over" id="gameOverMenu">
@@ -145,7 +117,6 @@
     const gameOverMenu = document.getElementById('gameOverMenu');
     const finalScore = document.getElementById('finalScore');
     const musicBtn = document.getElementById('musicBtn');
-    const dpad = document.getElementById('dpad');
 
     const gridSize = 20;
     let snake, dx, dy, food, score, game, speed;
@@ -271,13 +242,6 @@
       else if (e.key === 'ArrowRight' && dx === 0) { dx = gridSize; dy = 0; }
     });
 
-    function setDirection(dir) {
-      if (dir === 'up' && dy === 0) { dx = 0; dy = -gridSize; }
-      else if (dir === 'down' && dy === 0) { dx = 0; dy = gridSize; }
-      else if (dir === 'left' && dx === 0) { dx = -gridSize; dy = 0; }
-      else if (dir === 'right' && dx === 0) { dx = gridSize; dy = 0; }
-    }
-
     // Swipe controls
     let touchStartX = 0, touchStartY = 0;
     canvas.addEventListener('touchstart', (e) => {
@@ -290,11 +254,11 @@
       const dxTouch = t.clientX - touchStartX;
       const dyTouch = t.clientY - touchStartY;
       if (Math.abs(dxTouch) > Math.abs(dyTouch)) {
-        if (dxTouch > 30) setDirection('right');
-        else if (dxTouch < -30) setDirection('left');
+        if (dxTouch > 30) { if (dx !== -gridSize) { dx = gridSize; dy = 0; } }
+        else if (dxTouch < -30) { if (dx !== gridSize) { dx = -gridSize; dy = 0; } }
       } else {
-        if (dyTouch > 30) setDirection('down');
-        else if (dyTouch < -30) setDirection('up');
+        if (dyTouch > 30) { if (dy !== -gridSize) { dx = 0; dy = gridSize; } }
+        else if (dyTouch < -30) { if (dy !== gridSize) { dx = 0; dy = -gridSize; } }
       }
     });
 
@@ -304,7 +268,6 @@
       canvas.style.display = 'block';
       scoreBoard.style.display = 'block';
       musicBtn.style.display = 'block';
-      dpad.style.display = 'grid';
 
       resizeCanvas();
 
@@ -330,7 +293,6 @@
       canvas.style.display = 'none';
       scoreBoard.style.display = 'none';
       musicBtn.style.display = 'none';
-      dpad.style.display = 'none';
       gameOverMenu.style.display = 'block';
       finalScore.textContent = 'Your score: ' + score;
       if (harpMusic) harpMusic.pause();
