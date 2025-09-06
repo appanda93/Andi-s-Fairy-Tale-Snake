@@ -3,43 +3,64 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Andi's Fairytale Snake 🦋</title>
+  <title>Fairytale Snake 🦋</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sacramento&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --card: #fffafa;
+      --border: #d8b4f8;
+      --shadow: rgba(200,150,255,.4);
+      --ink: #6a1b9a;
+    }
+    html, body { height: 100%; }
     body {
       margin: 0;
       display: grid;
       place-items: center;
       background: linear-gradient(135deg, #ffe6f0, #e6f7ff);
       font-family: 'Sacramento', cursive;
-      color: #6a1b9a;
+      color: var(--ink);
       overflow: hidden;
       height: 100vh;
+      position: relative;
     }
+
+    /* LAYERS */
+    #startMenu, #gameOverMenu, #howtoBackdrop, #scoreBoard, #musicBtn { position: relative; z-index: 5; }
+    canvas { position: relative; z-index: 1; }
+
     #scoreBoard {
       font-size: 36px;
       text-shadow: 0 0 8px #ff99cc, 0 0 12px #cc99ff, 0 0 18px #ffe6ff;
       display: none;
+      user-select: none;
     }
-    canvas {
-      background: #fffafa;
-      border: 4px solid #d8b4f8;
-      border-radius: 14px;
-      box-shadow: 0 10px 30px rgba(200, 150, 255, 0.4);
+    #musicBtn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
       display: none;
-      touch-action: none; /* Prevent scrolling during swipe */
     }
-    .menu, .game-over {
-      text-align: center;
+
+    canvas {
+      background: var(--card);
+      border: 4px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 10px 30px var(--shadow);
+      display: none;
+      touch-action: none; /* Prevent page scroll during swipes */
     }
+
+    .menu, .game-over { text-align: center; }
     .menu h1, .game-over h1 {
       font-size: 50px;
       margin-bottom: 20px;
       text-shadow: 0 0 8px #ff99cc, 0 0 12px #cc99ff;
+      user-select: none;
     }
-    .menu button, .game-over button, #musicBtn {
+    .menu button, .game-over button, #musicBtn, .modal button {
       font-family: 'Sacramento', cursive;
       font-size: 24px;
       padding: 10px 20px;
@@ -49,59 +70,114 @@
       background: #f7d9f0;
       cursor: pointer;
       box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-      transition: all 0.2s ease;
+      transition: transform .15s ease, background .15s ease;
     }
-    .menu button:hover, .game-over button:hover, #musicBtn:hover {
+    .menu button:hover, .game-over button:hover, #musicBtn:hover, .modal button:hover {
       background: #e6c7ff;
       transform: scale(1.05);
     }
+
+    /* Fireflies never block taps */
     .firefly {
       position: absolute;
-      width: 6px;
-      height: 6px;
+      width: 6px; height: 6px;
       background: #ffff99;
       border-radius: 50%;
       box-shadow: 0 0 8px 4px rgba(255,255,150,0.6);
       animation: float 10s linear infinite;
+      pointer-events: none;
+      z-index: 0;
     }
     @keyframes float {
       from { transform: translateY(100vh); opacity: 0; }
-      50% { opacity: 1; }
-      to { transform: translateY(-10vh); opacity: 0; }
+      50%  { opacity: 1; }
+      to   { transform: translateY(-10vh); opacity: 0; }
     }
+
     .game-over { display: none; }
-    #musicBtn {
-      position: absolute;
-      top: 10px;
-      right: 10px;
+
+    /* Instructions modal */
+    .backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
       display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 10; /* above everything */
+    }
+    .modal {
+      max-width: 520px; width: 100%;
+      background: var(--card);
+      border: 4px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(200, 150, 255, 0.5);
+      padding: 18px 20px 8px;
+      text-align: left;
+      color: var(--ink);
+    }
+    .modal h2 {
+      margin: 0 0 8px;
+      font-size: 36px; text-align: center;
+      text-shadow: 0 0 8px #ff99cc, 0 0 12px #cc99ff;
+    }
+    .modal ul {
+      margin: 8px 0 0 18px;
+      padding: 0;
+      line-height: 1.35;
+      font-size: 22px;
+    }
+    .modal .actions {
+      display: flex; justify-content: center;
+      margin-top: 14px; margin-bottom: 6px;
     }
   </style>
 </head>
 <body>
   <!-- Start Menu -->
   <div class="menu" id="startMenu">
-    <h1>Andi's Fairytale Snake 🧚‍♀️</h1>
+    <h1>Fairytale Snake 🧚‍♀️</h1>
     <p>Select difficulty:</p>
-    <button onclick="startGame(200)">Easy</button>
-    <button onclick="startGame(120)">Medium</button>
-    <button onclick="startGame(70)">Hard</button>
+    <button id="btnEasy"   type="button">Easy</button>
+    <button id="btnMedium" type="button">Medium</button>
+    <button id="btnHard"   type="button">Hard</button>
+    <div>
+      <button id="openHowTo" type="button">How to Play</button>
+    </div>
   </div>
 
   <!-- Score + Canvas -->
   <div id="scoreBoard">Score: 0</div>
   <canvas id="gameCanvas"></canvas>
-  <button id="musicBtn" onclick="toggleMusic()">🔊 Music On</button>
+  <button id="musicBtn" type="button">🔊 Music On</button>
+
+  <!-- Instructions Modal -->
+  <div class="backdrop" id="howtoBackdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="howtoTitle">
+      <h2 id="howtoTitle">How to Play 🦋</h2>
+      <ul>
+        <li><b>Goal:</b> Eat cupcakes, mushrooms, and crystals to score points.</li>
+        <li><b>Move:</b> <i>Swipe</i> anywhere on the game to go Up/Down/Left/Right.</li>
+        <li><b>Desktop:</b> You can also use the arrow keys.</li>
+        <li><b>Avoid:</b> Don’t hit the walls or your own tail.</li>
+        <li><b>Music:</b> Use the 🔊 button to toggle background music.</li>
+      </ul>
+      <div class="actions">
+        <button id="closeHowTo" type="button">Got it ✨</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Game Over Screen -->
   <div class="game-over" id="gameOverMenu">
     <h1>Game Over 🦋</h1>
     <p id="finalScore"></p>
-    <button onclick="restartGame()">Play Again</button>
+    <button id="btnReplay" type="button">Play Again</button>
   </div>
 
   <script>
-    // Fireflies
+    // Fireflies (visual only; never capture clicks)
     for (let i = 0; i < 15; i++) {
       const f = document.createElement('div');
       f.className = 'firefly';
@@ -110,200 +186,225 @@
       document.body.appendChild(f);
     }
 
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    const scoreBoard = document.getElementById('scoreBoard');
-    const startMenu = document.getElementById('startMenu');
-    const gameOverMenu = document.getElementById('gameOverMenu');
-    const finalScore = document.getElementById('finalScore');
-    const musicBtn = document.getElementById('musicBtn');
+    document.addEventListener('DOMContentLoaded', () => {
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      const scoreBoard = document.getElementById('scoreBoard');
+      const startMenu = document.getElementById('startMenu');
+      const gameOverMenu = document.getElementById('gameOverMenu');
+      const finalScore = document.getElementById('finalScore');
+      const musicBtn = document.getElementById('musicBtn');
+      const howtoBackdrop = document.getElementById('howtoBackdrop');
 
-    const gridSize = 20;
-    let snake, dx, dy, food, score, game, speed;
+      // Buttons
+      const btnEasy   = document.getElementById('btnEasy');
+      const btnMedium = document.getElementById('btnMedium');
+      const btnHard   = document.getElementById('btnHard');
+      const btnReplay = document.getElementById('btnReplay');
+      const openHowTo = document.getElementById('openHowTo');
+      const closeHowTo= document.getElementById('closeHowTo');
 
-    const pastelColors = ['#fbb1bd', '#c1f0f6', '#f7d9f0', '#d4f7d0', '#fef3bd'];
-    const foodTypes = ['cupcake', 'mushroom', 'crystal'];
+      // Game state
+      const gridSize = 20;
+      let snake, dx, dy, food, score, game, speed;
+      const pastelColors = ['#fbb1bd','#c1f0f6','#f7d9f0','#d4f7d0','#fef3bd'];
+      const foodTypes = ['cupcake','mushroom','crystal'];
 
-    let harpMusic = new Audio("Lofi.mp3");
-    let musicOn = false;
+      // Audio created on user gesture (start)
+      let harpMusic = null;
+      let musicOn = false;
 
-    function resizeCanvas() {
-      const size = Math.min(window.innerWidth * 0.9, window.innerHeight * 0.7, 400);
-      canvas.width = size;
-      canvas.height = size;
-    }
-    window.addEventListener('resize', resizeCanvas);
-
-    function toggleMusic() {
-      if (!harpMusic) return;
-      if (musicOn) {
-        harpMusic.pause();
-        musicBtn.textContent = "🔇 Music Off";
-      } else {
-        harpMusic.play().catch(err => console.log("Audio blocked:", err));
-        musicBtn.textContent = "🔊 Music On";
+      function resizeCanvas() {
+        const size = Math.min(window.innerWidth * 0.9, window.innerHeight * 0.7, 400);
+        canvas.width = size;
+        canvas.height = size;
       }
-      musicOn = !musicOn;
-    }
+      window.addEventListener('resize', resizeCanvas);
 
-    function randomFood() {
-      const type = foodTypes[Math.floor(Math.random() * foodTypes.length)];
-      return {
-        x: Math.floor(Math.random() * (canvas.width / gridSize)) * gridSize,
-        y: Math.floor(Math.random() * (canvas.height / gridSize)) * gridSize,
-        type: type
-      };
-    }
+      function toggleMusic() {
+        if (!harpMusic) return; // not started yet
+        if (musicOn) {
+          harpMusic.pause();
+          musicBtn.textContent = "🔇 Music Off";
+        } else {
+          harpMusic.play().catch(err => console.log("Audio blocked:", err));
+          musicBtn.textContent = "🔊 Music On";
+        }
+        musicOn = !musicOn;
+      }
 
-    function drawSnake() {
-      snake.forEach((part, i) => {
-        const r = gridSize/2 - 2;
-        const cx = part.x + gridSize/2;
-        const cy = part.y + gridSize/2;
-        ctx.fillStyle = pastelColors[i % pastelColors.length];
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI*2);
-        ctx.fill();
+      function randomFood() {
+        const type = foodTypes[Math.floor(Math.random() * foodTypes.length)];
+        return {
+          x: Math.floor(Math.random() * (canvas.width / gridSize)) * gridSize,
+          y: Math.floor(Math.random() * (canvas.height / gridSize)) * gridSize,
+          type
+        };
+      }
+
+      function drawSnake() {
+        snake.forEach((part, i) => {
+          const r = gridSize/2 - 2;
+          const cx = part.x + gridSize/2;
+          const cy = part.y + gridSize/2;
+          const color = pastelColors[i % pastelColors.length];
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.arc(cx, cy, r, 0, Math.PI*2);
+          ctx.fill();
+        });
+      }
+
+      function drawFood() {
+        const {x, y, type} = food;
+        ctx.save();
+        ctx.translate(x + gridSize/2, y + gridSize/2);
+        if (type === 'cupcake') {
+          ctx.fillStyle = '#ffb6c1';
+          ctx.beginPath(); ctx.arc(0, 0, 8, Math.PI, 0); ctx.fill();
+          ctx.fillStyle = '#ff69b4';
+          ctx.fillRect(-8, 0, 16, 8);
+        } else if (type === 'mushroom') {
+          ctx.fillStyle = '#ff4444';
+          ctx.beginPath(); ctx.arc(0, 0, 10, Math.PI, 0); ctx.fill();
+          ctx.fillStyle = '#fff';
+          ctx.beginPath(); ctx.arc(-4,-2,2,0,Math.PI*2); ctx.arc(4,-2,2,0,Math.PI*2); ctx.fill();
+          ctx.fillStyle = '#d2b48c'; ctx.fillRect(-4, 0, 8, 8);
+        } else if (type === 'crystal') {
+          ctx.fillStyle = '#99ccff';
+          ctx.beginPath(); ctx.moveTo(0,-8); ctx.lineTo(6,0); ctx.lineTo(0,8); ctx.lineTo(-6,0); ctx.closePath(); ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      function moveSnake() {
+        const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+        snake.unshift(head);
+        if (head.x === food.x && head.y === food.y) {
+          score++;
+          scoreBoard.textContent = 'Score: ' + score;
+          food = randomFood();
+        } else {
+          snake.pop();
+        }
+      }
+
+      function checkCollision() {
+        const h = snake[0];
+        const hitWall = h.x < 0 || h.x >= canvas.width || h.y < 0 || h.y >= canvas.height;
+        const hitSelf = snake.slice(1).some(p => p.x === h.x && p.y === h.y);
+        if (hitWall || hitSelf) {
+          clearInterval(game);
+          gameOver();
+        }
+      }
+
+      function gameLoop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        moveSnake();
+        checkCollision();
+        drawSnake();
+        drawFood();
+      }
+
+      // Keyboard (desktop)
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowUp'    && dy === 0) { dx = 0; dy = -gridSize; }
+        else if (e.key === 'ArrowDown'  && dy === 0) { dx = 0; dy =  gridSize; }
+        else if (e.key === 'ArrowLeft'  && dx === 0) { dx = -gridSize; dy = 0; }
+        else if (e.key === 'ArrowRight' && dx === 0) { dx =  gridSize; dy = 0; }
+        // Close modal with Esc
+        else if (e.key === 'Escape' && howtoBackdrop.style.display === 'flex') {
+          closeHowToModal();
+        }
       });
-    }
 
-    function drawFood() {
-      const {x, y, type} = food;
-      ctx.save();
-      ctx.translate(x + gridSize/2, y + gridSize/2);
+      // Swipe (mobile)
+      let touchStartX = 0, touchStartY = 0;
+      canvas.addEventListener('touchstart', (e) => {
+        const t = e.touches[0];
+        touchStartX = t.clientX; touchStartY = t.clientY;
+      }, { passive: true });
+      canvas.addEventListener('touchend', (e) => {
+        const t = e.changedTouches[0];
+        const dxTouch = t.clientX - touchStartX;
+        const dyTouch = t.clientY - touchStartY;
+        if (Math.abs(dxTouch) > Math.abs(dyTouch)) {
+          if (dxTouch > 30 && dx !== -gridSize) { dx =  gridSize; dy = 0; }
+          else if (dxTouch < -30 && dx !==  gridSize) { dx = -gridSize; dy = 0; }
+        } else {
+          if (dyTouch > 30 && dy !== -gridSize) { dx = 0; dy =  gridSize; }
+          else if (dyTouch < -30 && dy !==  gridSize) { dx = 0; dy = -gridSize; }
+        }
+      }, { passive: true });
 
-      if (type === 'cupcake') {
-        ctx.fillStyle = '#ffb6c1';
-        ctx.beginPath();
-        ctx.arc(0, 0, 8, Math.PI, 0);
-        ctx.fill();
-        ctx.fillStyle = '#ff69b4';
-        ctx.fillRect(-8, 0, 16, 8);
-      } else if (type === 'mushroom') {
-        ctx.fillStyle = '#ff4444';
-        ctx.beginPath();
-        ctx.arc(0, 0, 10, Math.PI, 0);
-        ctx.fill();
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc(-4, -2, 2, 0, Math.PI*2);
-        ctx.arc(4, -2, 2, 0, Math.PI*2);
-        ctx.fill();
-        ctx.fillStyle = '#d2b48c';
-        ctx.fillRect(-4, 0, 8, 8);
-      } else if (type === 'crystal') {
-        ctx.fillStyle = '#99ccff';
-        ctx.beginPath();
-        ctx.moveTo(0, -8);
-        ctx.lineTo(6, 0);
-        ctx.lineTo(0, 8);
-        ctx.lineTo(-6, 0);
-        ctx.closePath();
-        ctx.fill();
+      // Modal helpers
+      function openHowToModal() {
+        howtoBackdrop.style.display = 'flex';
+        howtoBackdrop.setAttribute('aria-hidden','false');
       }
-      ctx.restore();
-    }
+      function closeHowToModal() {
+        howtoBackdrop.style.display = 'none';
+        howtoBackdrop.setAttribute('aria-hidden','true');
+      }
+      howtoBackdrop.addEventListener('click', (e) => {
+        if (e.target === howtoBackdrop) closeHowToModal();
+      });
 
-    function moveSnake() {
-      const head = { x: snake[0].x + dx, y: snake[0].y + dy };
-      snake.unshift(head);
+      // Start / Game Over
+      function startGame(selectedSpeed) {
+        startMenu.style.display = 'none';
+        gameOverMenu.style.display = 'none';
+        canvas.style.display = 'block';
+        scoreBoard.style.display = 'block';
+        musicBtn.style.display = 'block';
 
-      if (head.x === food.x && head.y === food.y) {
-        score++;
-        scoreBoard.textContent = 'Score: ' + score;
+        resizeCanvas();
+
+        snake = [{ x: gridSize*5, y: gridSize*5 }];
+        dx = gridSize; dy = 0;
         food = randomFood();
-      } else {
-        snake.pop();
-      }
-    }
-
-    function checkCollision() {
-      const h = snake[0];
-      const hitWall = h.x < 0 || h.x >= canvas.width || h.y < 0 || h.y >= canvas.height;
-      const hitSelf = snake.slice(1).some(p => p.x === h.x && p.y === h.y);
-      if (hitWall || hitSelf) {
+        score = 0;
+        scoreBoard.textContent = 'Score: 0';
+        speed = selectedSpeed;
         clearInterval(game);
-        gameOver();
+        game = setInterval(gameLoop, speed);
+
+        // Create music only once, on user gesture
+        if (!harpMusic) {
+          harpMusic = new Audio("Lofi.mp3");
+          harpMusic.loop = true;
+          harpMusic.volume = 0.6;
+        }
+        harpMusic.play().then(() => {
+          musicOn = true;
+          musicBtn.textContent = "🔊 Music On";
+        }).catch(err => console.log("Autoplay blocked:", err));
       }
-    }
 
-    function gameLoop() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      moveSnake();
-      checkCollision();
-      drawSnake();
-      drawFood();
-    }
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowUp' && dy === 0) { dx = 0; dy = -gridSize; }
-      else if (e.key === 'ArrowDown' && dy === 0) { dx = 0; dy = gridSize; }
-      else if (e.key === 'ArrowLeft' && dx === 0) { dx = -gridSize; dy = 0; }
-      else if (e.key === 'ArrowRight' && dx === 0) { dx = gridSize; dy = 0; }
-    });
-
-    // Swipe controls
-    let touchStartX = 0, touchStartY = 0;
-    canvas.addEventListener('touchstart', (e) => {
-      const t = e.touches[0];
-      touchStartX = t.clientX;
-      touchStartY = t.clientY;
-    });
-    canvas.addEventListener('touchend', (e) => {
-      const t = e.changedTouches[0];
-      const dxTouch = t.clientX - touchStartX;
-      const dyTouch = t.clientY - touchStartY;
-      if (Math.abs(dxTouch) > Math.abs(dyTouch)) {
-        if (dxTouch > 30) { if (dx !== -gridSize) { dx = gridSize; dy = 0; } }
-        else if (dxTouch < -30) { if (dx !== gridSize) { dx = -gridSize; dy = 0; } }
-      } else {
-        if (dyTouch > 30) { if (dy !== -gridSize) { dx = 0; dy = gridSize; } }
-        else if (dyTouch < -30) { if (dy !== gridSize) { dx = 0; dy = -gridSize; } }
+      function gameOver() {
+        canvas.style.display = 'none';
+        scoreBoard.style.display = 'none';
+        musicBtn.style.display = 'none';
+        gameOverMenu.style.display = 'block';
+        finalScore.textContent = 'Your score: ' + score;
+        if (harpMusic) harpMusic.pause();
       }
+
+      function restartGame() {
+        startMenu.style.display = 'block';
+        gameOverMenu.style.display = 'none';
+      }
+
+      // Wire up buttons AFTER DOM is ready
+      btnEasy  .addEventListener('click', () => startGame(200));
+      btnMedium.addEventListener('click', () => startGame(120));
+      btnHard  .addEventListener('click', () => startGame(70));
+      btnReplay.addEventListener('click', restartGame);
+      musicBtn.addEventListener('click', toggleMusic);
+      openHowTo.addEventListener('click', openHowToModal);
+      closeHowTo.addEventListener('click', closeHowToModal);
     });
-
-    function startGame(selectedSpeed) {
-      startMenu.style.display = 'none';
-      gameOverMenu.style.display = 'none';
-      canvas.style.display = 'block';
-      scoreBoard.style.display = 'block';
-      musicBtn.style.display = 'block';
-
-      resizeCanvas();
-
-      snake = [{x: gridSize*5, y: gridSize*5}];
-      dx = gridSize;
-      dy = 0;
-      food = randomFood();
-      score = 0;
-      scoreBoard.textContent = 'Score: 0';
-      speed = selectedSpeed;
-      clearInterval(game);
-      game = setInterval(gameLoop, speed);
-
-      harpMusic.loop = true;
-      harpMusic.volume = 0.6;
-      harpMusic.play().then(() => {
-        musicOn = true;
-        musicBtn.textContent = "🔊 Music On";
-      }).catch(err => console.log("Autoplay blocked:", err));
-    }
-
-    function gameOver() {
-      canvas.style.display = 'none';
-      scoreBoard.style.display = 'none';
-      musicBtn.style.display = 'none';
-      gameOverMenu.style.display = 'block';
-      finalScore.textContent = 'Your score: ' + score;
-      if (harpMusic) harpMusic.pause();
-    }
-
-    function restartGame() {
-      startMenu.style.display = 'block';
-      gameOverMenu.style.display = 'none';
-    }
   </script>
 </body>
 </html>
-
-
