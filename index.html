@@ -6,166 +6,115 @@
   <title>Fairytale Snake 🦋</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Sacramento&display=swap" rel="stylesheet">
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Sacramento&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --card: #fffafa;
-      --border: #d8b4f8;
-      --shadow: rgba(200,150,255,.4);
-      --ink: #6a1b9a;
-    }
+    :root { --card:#fffafa; --border:#d8b4f8; --shadow:rgba(200,150,255,.4); --ink:#6a1b9a; }
     html, body { height: 100%; }
     body {
-      margin: 0;
-      display: grid;
-      place-items: center;
-      background: linear-gradient(135deg, #ffe6f0, #e6f7ff);
-      font-family: 'Sacramento', cursive;
-      color: var(--ink);
-      overflow: hidden;
-      height: 100vh;
-      position: relative;
+      margin: 0; display: grid; place-items: center;
+      background: linear-gradient(135deg,#ffe6f0,#e6f7ff);
+      font-family: 'Poppins', sans-serif; color: var(--ink);
+      overflow: hidden; height: 100vh; position: relative;
     }
-
-    /* LAYERS */
-    #startMenu, #gameOverMenu, #howtoBackdrop, #scoreBoard, #musicBtn { position: relative; z-index: 5; }
-    canvas { position: relative; z-index: 1; }
+    h1, h2, #scoreBoard { font-family: 'Sacramento', cursive; }
 
     #scoreBoard {
-      font-size: 36px;
-      text-shadow: 0 0 8px #ff99cc, 0 0 12px #cc99ff, 0 0 18px #ffe6ff;
-      display: none;
-      user-select: none;
+      font-size: 28px;
+      text-shadow: 0 0 8px #ff99cc,0 0 12px #cc99ff,0 0 18px #ffe6ff;
+      display: none; user-select: none;
+      position: relative; z-index: 4;
     }
-    #musicBtn {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      display: none;
+    #musicBtn { position: absolute; top: 10px; right: 10px; display: none; z-index: 4; }
+
+    /* Game canvas */
+    #gameCanvas {
+      background: var(--card); border: 4px solid var(--border); border-radius: 14px;
+      box-shadow: 0 10px 30px var(--shadow); display: none; touch-action: none; z-index: 1;
     }
 
-    canvas {
-      background: var(--card);
-      border: 4px solid var(--border);
-      border-radius: 14px;
-      box-shadow: 0 10px 30px var(--shadow);
-      display: none;
-      touch-action: none; /* Prevent page scroll during swipes */
+    /* Confetti overlay canvas (on top of everything) */
+    #fxCanvas {
+      position: absolute; inset: 0;
+      pointer-events: none; z-index: 999;
     }
 
-    .menu, .game-over { text-align: center; }
+    .menu, .game-over { text-align: center; z-index: 4; }
     .menu h1, .game-over h1 {
-      font-size: 50px;
-      margin-bottom: 20px;
-      text-shadow: 0 0 8px #ff99cc, 0 0 12px #cc99ff;
-      user-select: none;
+      font-size: 50px; margin-bottom: 10px;
+      text-shadow: 0 0 8px #ff99cc, 0 0 12px #cc99ff; user-select: none;
+    }
+    .menu .best, .game-over .best {
+      margin-top: 4px; font-size: 16px; opacity: 0.85;
     }
     .menu button, .game-over button, #musicBtn, .modal button {
-      font-family: 'Sacramento', cursive;
-      font-size: 24px;
-      padding: 10px 20px;
-      margin: 10px;
-      border: none;
-      border-radius: 10px;
-      background: #f7d9f0;
-      cursor: pointer;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      font-size: 20px; padding: 10px 20px; margin: 10px; border: none; border-radius: 10px;
+      background: #f7d9f0; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
       transition: transform .15s ease, background .15s ease;
     }
     .menu button:hover, .game-over button:hover, #musicBtn:hover, .modal button:hover {
-      background: #e6c7ff;
-      transform: scale(1.05);
+      background: #e6c7ff; transform: scale(1.05);
     }
 
-    /* Fireflies never block taps */
     .firefly {
-      position: absolute;
-      width: 6px; height: 6px;
-      background: #ffff99;
-      border-radius: 50%;
-      box-shadow: 0 0 8px 4px rgba(255,255,150,0.6);
-      animation: float 10s linear infinite;
-      pointer-events: none;
-      z-index: 0;
+      position: absolute; width: 6px; height: 6px; background: #ffff99; border-radius: 50%;
+      box-shadow: 0 0 8px 4px rgba(255,255,150,0.6); animation: float 10s linear infinite;
+      pointer-events: none; z-index: 0;
     }
-    @keyframes float {
-      from { transform: translateY(100vh); opacity: 0; }
-      50%  { opacity: 1; }
-      to   { transform: translateY(-10vh); opacity: 0; }
-    }
+    @keyframes float { from{transform:translateY(100vh);opacity:0;} 50%{opacity:1;} to{transform:translateY(-10vh);opacity:0;} }
 
     .game-over { display: none; }
 
-    /* Instructions modal */
+    /* Modal */
     .backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.35);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      z-index: 10; /* above everything */
+      position: fixed; inset: 0; background: rgba(0,0,0,0.35);
+      display: none; align-items: center; justify-content: center; padding: 20px; z-index: 10;
     }
     .modal {
-      max-width: 520px; width: 100%;
-      background: var(--card);
-      border: 4px solid var(--border);
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(200, 150, 255, 0.5);
-      padding: 18px 20px 8px;
-      text-align: left;
-      color: var(--ink);
+      max-width: 520px; width: 100%; background: var(--card); border: 4px solid var(--border);
+      border-radius: 16px; box-shadow: 0 10px 30px rgba(200,150,255,.5);
+      padding: 18px 20px 8px; text-align: left; color: var(--ink);
     }
-    .modal h2 {
-      margin: 0 0 8px;
-      font-size: 36px; text-align: center;
-      text-shadow: 0 0 8px #ff99cc, 0 0 12px #cc99ff;
-    }
-    .modal ul {
-      margin: 8px 0 0 18px;
-      padding: 0;
-      line-height: 1.35;
-      font-size: 22px;
-    }
-    .modal .actions {
-      display: flex; justify-content: center;
-      margin-top: 14px; margin-bottom: 6px;
-    }
+    .modal h2 { margin: 0 0 8px; font-size: 32px; text-align: center; text-shadow: 0 0 8px #ff99cc, 0 0 12px #cc99ff; }
+    .modal ul { margin: 8px 0 0 18px; padding: 0; line-height: 1.35; font-size: 18px; }
+    .modal .actions { display: flex; justify-content: center; margin-top: 14px; margin-bottom: 6px; }
   </style>
 </head>
 <body>
   <!-- Start Menu -->
   <div class="menu" id="startMenu">
-    <h1>Fairytale Snake 🧚‍♀️</h1>
+    <h1>Andi's Fairytale Snake 🧚‍♀️</h1>
+    <div class="best" id="bestOnMenu">Best: 0</div>
     <p>Select difficulty:</p>
-    <button id="btnEasy"   type="button">Easy</button>
-    <button id="btnMedium" type="button">Medium</button>
-    <button id="btnHard"   type="button">Hard</button>
+    <button id="btnEasy">Easy</button>
+    <button id="btnMedium">Medium</button>
+    <button id="btnHard">Hard</button>
     <div>
-      <button id="openHowTo" type="button">How to Play</button>
+      <button id="btnOpenHowTo">How to Play</button>
+      <button id="btnResetBest" title="Clear saved high score">Reset High Score</button>
     </div>
   </div>
 
   <!-- Score + Canvas -->
-  <div id="scoreBoard">Score: 0</div>
+  <div id="scoreBoard">Score: 0 &nbsp;|&nbsp; 👑 Best: 0</div>
   <canvas id="gameCanvas"></canvas>
-  <button id="musicBtn" type="button">🔊 Music On</button>
+  <button id="musicBtn">🔊 Music On</button>
+
+  <!-- Confetti overlay (full-screen) -->
+  <canvas id="fxCanvas"></canvas>
 
   <!-- Instructions Modal -->
-  <div class="backdrop" id="howtoBackdrop" aria-hidden="true">
+  <div class="backdrop" id="howtoBackdrop">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="howtoTitle">
       <h2 id="howtoTitle">How to Play 🦋</h2>
       <ul>
-        <li><b>Goal:</b> Eat cupcakes, mushrooms, and crystals to score points.</li>
-        <li><b>Move:</b> <i>Swipe</i> anywhere on the game to go Up/Down/Left/Right.</li>
-        <li><b>Desktop:</b> You can also use the arrow keys.</li>
-        <li><b>Avoid:</b> Don’t hit the walls or your own tail.</li>
+        <li><b>Goal:</b> Eat cupcakes, mushrooms, and crystals to score points. Woo!</li>
+        <li><b>Move:</b> Swipe up, down, left, or right in the direction you want to go. Don't swipe backwards!</li>
+        <li><b>Desktop:</b> Use the arrow keys.</li>
+        <li><b>Avoid:</b> Don’t hit the walls or your own tail. Yikes!!</li>
         <li><b>Music:</b> Use the 🔊 button to toggle background music.</li>
       </ul>
-      <div class="actions">
-        <button id="closeHowTo" type="button">Got it ✨</button>
-      </div>
+      <div class="actions"><button id="btnCloseHowTo">Got it ✨</button></div>
     </div>
   </div>
 
@@ -173,11 +122,12 @@
   <div class="game-over" id="gameOverMenu">
     <h1>Game Over 🦋</h1>
     <p id="finalScore"></p>
-    <button id="btnReplay" type="button">Play Again</button>
+    <div class="best" id="bestOnOver">Best: 0</div>
+    <button id="btnReplay">Play Again</button>
   </div>
 
   <script>
-    // Fireflies (visual only; never capture clicks)
+    // Fireflies (visual only)
     for (let i = 0; i < 15; i++) {
       const f = document.createElement('div');
       f.className = 'firefly';
@@ -187,6 +137,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+      // Elements
       const canvas = document.getElementById('gameCanvas');
       const ctx = canvas.getContext('2d');
       const scoreBoard = document.getElementById('scoreBoard');
@@ -195,14 +146,21 @@
       const finalScore = document.getElementById('finalScore');
       const musicBtn = document.getElementById('musicBtn');
       const howtoBackdrop = document.getElementById('howtoBackdrop');
+      const bestOnMenu = document.getElementById('bestOnMenu');
+      const bestOnOver = document.getElementById('bestOnOver');
+
+      // Confetti overlay
+      const fx = document.getElementById('fxCanvas');
+      const fxx = fx.getContext('2d');
 
       // Buttons
-      const btnEasy   = document.getElementById('btnEasy');
+      const btnEasy = document.getElementById('btnEasy');
       const btnMedium = document.getElementById('btnMedium');
-      const btnHard   = document.getElementById('btnHard');
+      const btnHard = document.getElementById('btnHard');
       const btnReplay = document.getElementById('btnReplay');
-      const openHowTo = document.getElementById('openHowTo');
-      const closeHowTo= document.getElementById('closeHowTo');
+      const btnOpenHowTo = document.getElementById('btnOpenHowTo');
+      const btnCloseHowTo = document.getElementById('btnCloseHowTo');
+      const btnResetBest = document.getElementById('btnResetBest');
 
       // Game state
       const gridSize = 20;
@@ -210,19 +168,29 @@
       const pastelColors = ['#fbb1bd','#c1f0f6','#f7d9f0','#d4f7d0','#fef3bd'];
       const foodTypes = ['cupcake','mushroom','crystal'];
 
-      // Audio created on user gesture (start)
+      // High score (persistent)
+      const BEST_KEY = 'fairytale_snake_best';
+      let best = parseInt(localStorage.getItem(BEST_KEY) || '0', 10);
+      updateBestDisplays();
+
+      // Audio (created on first click)
       let harpMusic = null;
       let musicOn = false;
 
+      // Responsive sizes
       function resizeCanvas() {
         const size = Math.min(window.innerWidth * 0.9, window.innerHeight * 0.7, 400);
         canvas.width = size;
         canvas.height = size;
+
+        fx.width = window.innerWidth;
+        fx.height = window.innerHeight;
       }
       window.addEventListener('resize', resizeCanvas);
 
+      // Music toggle
       function toggleMusic() {
-        if (!harpMusic) return; // not started yet
+        if (!harpMusic) return;
         if (musicOn) {
           harpMusic.pause();
           musicBtn.textContent = "🔇 Music Off";
@@ -233,6 +201,7 @@
         musicOn = !musicOn;
       }
 
+      // Food & draw
       function randomFood() {
         const type = foodTypes[Math.floor(Math.random() * foodTypes.length)];
         return {
@@ -247,8 +216,7 @@
           const r = gridSize/2 - 2;
           const cx = part.x + gridSize/2;
           const cy = part.y + gridSize/2;
-          const color = pastelColors[i % pastelColors.length];
-          ctx.fillStyle = color;
+          ctx.fillStyle = pastelColors[i % pastelColors.length];
           ctx.beginPath();
           ctx.arc(cx, cy, r, 0, Math.PI*2);
           ctx.fill();
@@ -262,8 +230,7 @@
         if (type === 'cupcake') {
           ctx.fillStyle = '#ffb6c1';
           ctx.beginPath(); ctx.arc(0, 0, 8, Math.PI, 0); ctx.fill();
-          ctx.fillStyle = '#ff69b4';
-          ctx.fillRect(-8, 0, 16, 8);
+          ctx.fillStyle = '#ff69b4'; ctx.fillRect(-8, 0, 16, 8);
         } else if (type === 'mushroom') {
           ctx.fillStyle = '#ff4444';
           ctx.beginPath(); ctx.arc(0, 0, 10, Math.PI, 0); ctx.fill();
@@ -277,12 +244,13 @@
         ctx.restore();
       }
 
+      // Movement & collisions
       function moveSnake() {
         const head = { x: snake[0].x + dx, y: snake[0].y + dy };
         snake.unshift(head);
         if (head.x === food.x && head.y === food.y) {
           score++;
-          scoreBoard.textContent = 'Score: ' + score;
+          scoreBoard.textContent = `Score: ${score}  |  👑 Best: ${best}`;
           food = randomFood();
         } else {
           snake.pop();
@@ -313,17 +281,13 @@
         else if (e.key === 'ArrowDown'  && dy === 0) { dx = 0; dy =  gridSize; }
         else if (e.key === 'ArrowLeft'  && dx === 0) { dx = -gridSize; dy = 0; }
         else if (e.key === 'ArrowRight' && dx === 0) { dx =  gridSize; dy = 0; }
-        // Close modal with Esc
-        else if (e.key === 'Escape' && howtoBackdrop.style.display === 'flex') {
-          closeHowToModal();
-        }
+        else if (e.key === 'Escape' && howtoBackdrop.style.display === 'flex') closeHowToModal();
       });
 
       // Swipe (mobile)
       let touchStartX = 0, touchStartY = 0;
       canvas.addEventListener('touchstart', (e) => {
-        const t = e.touches[0];
-        touchStartX = t.clientX; touchStartY = t.clientY;
+        const t = e.touches[0]; touchStartX = t.clientX; touchStartY = t.clientY;
       }, { passive: true });
       canvas.addEventListener('touchend', (e) => {
         const t = e.changedTouches[0];
@@ -338,18 +302,84 @@
         }
       }, { passive: true });
 
-      // Modal helpers
-      function openHowToModal() {
-        howtoBackdrop.style.display = 'flex';
-        howtoBackdrop.setAttribute('aria-hidden','false');
+      // High score helpers
+      function updateBestDisplays() {
+        bestOnMenu.textContent = `Best: ${best}`;
+        bestOnOver.textContent = `Best: ${best}`;
+        const currentScoreText = (scoreBoard.textContent.split('|')[0] || 'Score: 0 ').trim();
+        scoreBoard.textContent = `${currentScoreText}  |  👑 Best: ${best}`;
       }
-      function closeHowToModal() {
-        howtoBackdrop.style.display = 'none';
-        howtoBackdrop.setAttribute('aria-hidden','true');
+
+      function maybeSetNewBest() {
+        if (score > best) {
+          best = score;
+          localStorage.setItem(BEST_KEY, String(best));
+          updateBestDisplays();
+          launchConfetti(); // 🎉 celebrate!
+        }
       }
-      howtoBackdrop.addEventListener('click', (e) => {
-        if (e.target === howtoBackdrop) closeHowToModal();
-      });
+
+      // Confetti engine (tiny + fast)
+      let confettiAnim = null;
+      function launchConfetti() {
+        // generate particles
+        const count = 140; // nice burst
+        const particles = [];
+        const colors = ['#ff99cc','#c1f0f6','#f7d9f0','#d4f7d0','#fef3bd','#b39ddb'];
+        const w = fx.width = window.innerWidth;
+        const h = fx.height = window.innerHeight;
+        for (let i = 0; i < count; i++) {
+          const angle = Math.random() * Math.PI - Math.PI / 2; // left/up to right/up
+          const speed = 6 + Math.random() * 6;
+          particles.push({
+            x: w / 2,
+            y: h * 0.3,           // a bit above center
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 2,
+            g: 0.25 + Math.random() * 0.2, // gravity
+            life: 60 + Math.random() * 40,  // frames
+            color: colors[Math.floor(Math.random() * colors.length)],
+            size: 4 + Math.random() * 4,
+            rot: Math.random() * Math.PI,
+            vr: (Math.random() - 0.5) * 0.3
+          });
+        }
+
+        // run animation ~2s
+        cancelAnimationFrame(confettiAnim);
+        let frame = 0;
+        function tick() {
+          frame++;
+          fxx.clearRect(0, 0, fx.width, fx.height);
+          for (const p of particles) {
+            // Update
+            p.vy += p.g;
+            p.x += p.vx;
+            p.y += p.vy;
+            p.rot += p.vr;
+            p.life--;
+
+            // Draw (little rectangles / slivers)
+            fxx.save();
+            fxx.translate(p.x, p.y);
+            fxx.rotate(p.rot);
+            fxx.fillStyle = p.color;
+            fxx.fillRect(-p.size/2, -p.size/2, p.size, p.size * 1.6);
+            fxx.restore();
+          }
+          // Keep only alive & on screen
+          for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            if (p.life <= 0 || p.y > fx.height + 40) particles.splice(i, 1);
+          }
+          if (particles.length > 0 && frame < 180) {
+            confettiAnim = requestAnimationFrame(tick);
+          } else {
+            fxx.clearRect(0, 0, fx.width, fx.height);
+          }
+        }
+        tick();
+      }
 
       // Start / Game Over
       function startGame(selectedSpeed) {
@@ -365,12 +395,11 @@
         dx = gridSize; dy = 0;
         food = randomFood();
         score = 0;
-        scoreBoard.textContent = 'Score: 0';
+        scoreBoard.textContent = `Score: 0  |  👑 Best: ${best}`;
         speed = selectedSpeed;
         clearInterval(game);
         game = setInterval(gameLoop, speed);
 
-        // Create music only once, on user gesture
         if (!harpMusic) {
           harpMusic = new Audio("Lofi.mp3");
           harpMusic.loop = true;
@@ -383,27 +412,47 @@
       }
 
       function gameOver() {
+        maybeSetNewBest();
         canvas.style.display = 'none';
         scoreBoard.style.display = 'none';
         musicBtn.style.display = 'none';
         gameOverMenu.style.display = 'block';
-        finalScore.textContent = 'Your score: ' + score;
+        finalScore.textContent = `Your score: ${score}`;
+        bestOnOver.textContent = `Best: ${best}`;
         if (harpMusic) harpMusic.pause();
       }
 
       function restartGame() {
         startMenu.style.display = 'block';
         gameOverMenu.style.display = 'none';
+        updateBestDisplays();
       }
 
-      // Wire up buttons AFTER DOM is ready
-      btnEasy  .addEventListener('click', () => startGame(200));
+      // Modal helpers
+      function openHowToModal() { howtoBackdrop.style.display = 'flex'; }
+      function closeHowToModal() { howtoBackdrop.style.display = 'none'; }
+      howtoBackdrop.addEventListener('click', (e) => {
+        if (e.target === howtoBackdrop) closeHowToModal();
+      });
+
+      // Reset best
+      function resetBest() {
+        if (confirm('Reset your saved high score?')) {
+          best = 0;
+          localStorage.setItem(BEST_KEY, '0');
+          updateBestDisplays();
+        }
+      }
+
+      // Wire buttons
+      btnEasy.addEventListener('click', () => startGame(200));
       btnMedium.addEventListener('click', () => startGame(120));
-      btnHard  .addEventListener('click', () => startGame(70));
+      btnHard.addEventListener('click', () => startGame(70));
       btnReplay.addEventListener('click', restartGame);
       musicBtn.addEventListener('click', toggleMusic);
-      openHowTo.addEventListener('click', openHowToModal);
-      closeHowTo.addEventListener('click', closeHowToModal);
+      btnOpenHowTo.addEventListener('click', openHowToModal);
+      btnCloseHowTo.addEventListener('click', closeHowToModal);
+      btnResetBest.addEventListener('click', resetBest);
     });
   </script>
 </body>
