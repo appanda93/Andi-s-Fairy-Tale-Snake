@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fairytale Snake 🦋</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sacramento&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, #ffe6f0, #e6f7ff);
+      font-family: 'Sacramento', cursive;
+      color: #6a1b9a;
+      overflow: hidden;
+      height: 100vh;
+    }
+    #scoreBoard {
+      font-size: 36px;
+      text-shadow: 0 0 8px #ff99cc, 0 0 12px #cc99ff, 0 0 18px #ffe6ff;
+      display: none;
+    }
+    canvas {
+      background: #fffafa;
+      border: 4px solid #d8b4f8;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(200, 150, 255, 0.4);
+      display: none;
+      touch-action: none; /* Prevent scrolling during swipe */
+    }
+    .menu, .game-over {
+      text-align: center;
+    }
+    .menu h1, .game-over h1 {
+      font-size: 50px;
+      margin-bottom: 20px;
+      text-shadow: 0 0 8px #ff99cc, 0 0 12px #cc99ff;
+    }
+    .menu button, .game-over button, #musicBtn, .dpad button {
+      font-family: 'Sacramento', cursive;
+      font-size: 24px;
+      padding: 10px 20px;
+      margin: 10px;
+      border: none;
+      border-radius: 10px;
+      background: #f7d9f0;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: all 0.2s ease;
+    }
+    .menu button:hover, .game-over button:hover, #musicBtn:hover, .dpad button:hover {
+      background: #e6c7ff;
+      transform: scale(1.05);
+    }
+    .firefly {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      background: #ffff99;
+      border-radius: 50%;
+      box-shadow: 0 0 8px 4px rgba(255,255,150,0.6);
+      animation: float 10s linear infinite;
+    }
+    @keyframes float {
+      from { transform: translateY(100vh); opacity: 0; }
+      50% { opacity: 1; }
+      to { transform: translateY(-10vh); opacity: 0; }
+    }
+    .game-over { display: none; }
+    #musicBtn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: none;
+    }
+    /* Mobile D-pad */
+    .dpad {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      grid-template-areas:
+        ". up ."
+        "left down right";
+      gap: 5px;
+    }
+    .dpad button {
+      width: 60px;
+      height: 60px;
+    }
+    .dpad-up { grid-area: up; }
+    .dpad-down { grid-area: down; }
+    .dpad-left { grid-area: left; }
+    .dpad-right { grid-area: right; }
+  </style>
+</head>
+<body>
+  <!-- Start Menu -->
+  <div class="menu" id="startMenu">
+    <h1>Fairytale Snake 🧚‍♀️</h1>
+    <p>Select difficulty:</p>
+    <button onclick="startGame(200)">Easy</button>
+    <button onclick="startGame(120)">Medium</button>
+    <button onclick="startGame(70)">Hard</button>
+  </div>
+
+  <!-- Score + Canvas -->
+  <div id="scoreBoard">Score: 0</div>
+  <canvas id="gameCanvas"></canvas>
+  <button id="musicBtn" onclick="toggleMusic()">🔊 Music On</button>
+
+  <!-- Mobile D-pad -->
+  <div class="dpad" id="dpad">
+    <button class="dpad-up" onclick="setDirection('up')">⬆</button>
+    <button class="dpad-left" onclick="setDirection('left')">⬅</button>
+    <button class="dpad-down" onclick="setDirection('down')">⬇</button>
+    <button class="dpad-right" onclick="setDirection('right')">➡</button>
+  </div>
+
+  <!-- Game Over Screen -->
+  <div class="game-over" id="gameOverMenu">
+    <h1>Game Over 🦋</h1>
+    <p id="finalScore"></p>
+    <button onclick="restartGame()">Play Again</button>
+  </div>
+
+  <script>
+    // Fireflies
+    for (let i = 0; i < 15; i++) {
+      const f = document.createElement('div');
+      f.className = 'firefly';
+      f.style.left = Math.random() * 100 + 'vw';
+      f.style.animationDuration = (8 + Math.random() * 5) + 's';
+      document.body.appendChild(f);
+    }
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreBoard = document.getElementById('scoreBoard');
+    const startMenu = document.getElementById('startMenu');
+    const gameOverMenu = document.getElementById('gameOverMenu');
+    const finalScore = document.getElementById('finalScore');
+    const musicBtn = document.getElementById('musicBtn');
+    const dpad = document.getElementById('dpad');
+
+    const gridSize = 20;
+    let snake, dx, dy, food, score, game, speed;
+
+    const pastelColors = ['#fbb1bd', '#c1f0f6', '#f7d9f0', '#d4f7d0', '#fef3bd'];
+    const foodTypes = ['cupcake', 'mushroom', 'crystal'];
+
+    let harpMusic = new Audio("Lofi.mp3");
+    let musicOn = false;
+
+    function resizeCanvas() {
+      const size = Math.min(window.innerWidth * 0.9, window.innerHeight * 0.7, 400);
+      canvas.width = size;
+      canvas.height = size;
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    function toggleMusic() {
+      if (!harpMusic) return;
+      if (musicOn) {
+        harpMusic.pause();
+        musicBtn.textContent = "🔇 Music Off";
+      } else {
+        harpMusic.play().catch(err => console.log("Audio blocked:", err));
+        musicBtn.textContent = "🔊 Music On";
+      }
+      musicOn = !musicOn;
+    }
+
+    function randomFood() {
+      const type = foodTypes[Math.floor(Math.random() * foodTypes.length)];
+      return {
+        x: Math.floor(Math.random() * (canvas.width / gridSize)) * gridSize,
+        y: Math.floor(Math.random() * (canvas.height / gridSize)) * gridSize,
+        type: type
+      };
+    }
+
+    function drawSnake() {
+      snake.forEach((part, i) => {
+        const r = gridSize/2 - 2;
+        const cx = part.x + gridSize/2;
+        const cy = part.y + gridSize/2;
+        ctx.fillStyle = pastelColors[i % pastelColors.length];
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI*2);
+        ctx.fill();
+      });
+    }
+
+    function drawFood() {
+      const {x, y, type} = food;
+      ctx.save();
+      ctx.translate(x + gridSize/2, y + gridSize/2);
+
+      if (type === 'cupcake') {
+        ctx.fillStyle = '#ffb6c1';
+        ctx.beginPath();
+        ctx.arc(0, 0, 8, Math.PI, 0);
+        ctx.fill();
+        ctx.fillStyle = '#ff69b4';
+        ctx.fillRect(-8, 0, 16, 8);
+      } else if (type === 'mushroom') {
+        ctx.fillStyle = '#ff4444';
+        ctx.beginPath();
+        ctx.arc(0, 0, 10, Math.PI, 0);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(-4, -2, 2, 0, Math.PI*2);
+        ctx.arc(4, -2, 2, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = '#d2b48c';
+        ctx.fillRect(-4, 0, 8, 8);
+      } else if (type === 'crystal') {
+        ctx.fillStyle = '#99ccff';
+        ctx.beginPath();
+        ctx.moveTo(0, -8);
+        ctx.lineTo(6, 0);
+        ctx.lineTo(0, 8);
+        ctx.lineTo(-6, 0);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function moveSnake() {
+      const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+      snake.unshift(head);
+
+      if (head.x === food.x && head.y === food.y) {
+        score++;
+        scoreBoard.textContent = 'Score: ' + score;
+        food = randomFood();
+      } else {
+        snake.pop();
+      }
+    }
+
+    function checkCollision() {
+      const h = snake[0];
+      const hitWall = h.x < 0 || h.x >= canvas.width || h.y < 0 || h.y >= canvas.height;
+      const hitSelf = snake.slice(1).some(p => p.x === h.x && p.y === h.y);
+      if (hitWall || hitSelf) {
+        clearInterval(game);
+        gameOver();
+      }
+    }
+
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      moveSnake();
+      checkCollision();
+      drawSnake();
+      drawFood();
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp' && dy === 0) { dx = 0; dy = -gridSize; }
+      else if (e.key === 'ArrowDown' && dy === 0) { dx = 0; dy = gridSize; }
+      else if (e.key === 'ArrowLeft' && dx === 0) { dx = -gridSize; dy = 0; }
+      else if (e.key === 'ArrowRight' && dx === 0) { dx = gridSize; dy = 0; }
+    });
+
+    function setDirection(dir) {
+      if (dir === 'up' && dy === 0) { dx = 0; dy = -gridSize; }
+      else if (dir === 'down' && dy === 0) { dx = 0; dy = gridSize; }
+      else if (dir === 'left' && dx === 0) { dx = -gridSize; dy = 0; }
+      else if (dir === 'right' && dx === 0) { dx = gridSize; dy = 0; }
+    }
+
+    // Swipe controls
+    let touchStartX = 0, touchStartY = 0;
+    canvas.addEventListener('touchstart', (e) => {
+      const t = e.touches[0];
+      touchStartX = t.clientX;
+      touchStartY = t.clientY;
+    });
+    canvas.addEventListener('touchend', (e) => {
+      const t = e.changedTouches[0];
+      const dxTouch = t.clientX - touchStartX;
+      const dyTouch = t.clientY - touchStartY;
+      if (Math.abs(dxTouch) > Math.abs(dyTouch)) {
+        if (dxTouch > 30) setDirection('right');
+        else if (dxTouch < -30) setDirection('left');
+      } else {
+        if (dyTouch > 30) setDirection('down');
+        else if (dyTouch < -30) setDirection('up');
+      }
+    });
+
+    function startGame(selectedSpeed) {
+      startMenu.style.display = 'none';
+      gameOverMenu.style.display = 'none';
+      canvas.style.display = 'block';
+      scoreBoard.style.display = 'block';
+      musicBtn.style.display = 'block';
+      dpad.style.display = 'grid';
+
+      resizeCanvas();
+
+      snake = [{x: gridSize*5, y: gridSize*5}];
+      dx = gridSize;
+      dy = 0;
+      food = randomFood();
+      score = 0;
+      scoreBoard.textContent = 'Score: 0';
+      speed = selectedSpeed;
+      clearInterval(game);
+      game = setInterval(gameLoop, speed);
+
+      harpMusic.loop = true;
+      harpMusic.volume = 0.6;
+      harpMusic.play().then(() => {
+        musicOn = true;
+        musicBtn.textContent = "🔊 Music On";
+      }).catch(err => console.log("Autoplay blocked:", err));
+    }
+
+    function gameOver() {
+      canvas.style.display = 'none';
+      scoreBoard.style.display = 'none';
+      musicBtn.style.display = 'none';
+      dpad.style.display = 'none';
+      gameOverMenu.style.display = 'block';
+      finalScore.textContent = 'Your score: ' + score;
+      if (harpMusic) harpMusic.pause();
+    }
+
+    function restartGame() {
+      startMenu.style.display = 'block';
+      gameOverMenu.style.display = 'none';
+    }
+  </script>
+</body>
+</html>
